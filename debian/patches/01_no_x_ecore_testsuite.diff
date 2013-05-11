@@ -1,0 +1,13 @@
+diff --git a/src/tests/ecore_test_ecore_x.c b/src/tests/ecore_test_ecore_x.c
+index 4b9e126..a6119fa 100644
+--- a/src/tests/ecore_test_ecore_x.c
++++ b/src/tests/ecore_test_ecore_x.c
+@@ -49,7 +49,7 @@ void ecore_test_ecore_x(TCase *tc)
+ {
+ 
+ /* TODO: change to HAVE_ECORE_X when xcb implementation is done */
+-#ifdef HAVE_ECORE_X_XLIB
++#if 0
+    tcase_add_test(tc, ecore_test_ecore_x_init);
+    tcase_add_test(tc, ecore_test_ecore_x_bell);
+ #endif

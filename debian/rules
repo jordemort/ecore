@@ -1,0 +1,42 @@
+#!/usr/bin/make -f
+
+CFLAGS += -fvisibility=hidden
+LDFLAGS += -Wl,-z,defs -Wl,--as-needed
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+	dh_auto_configure -- \
+	--disable-rpath \
+	--enable-cares \
+	--enable-posix-threads \
+	--enable-glib \
+	--disable-openssl \
+	--enable-gnutls \
+	--enable-ecore-fb \
+	--enable-ecore-evas-fb \
+	--enable-ecore-evas-software-x11 \
+	--disable-ecore-directfb \
+	--disable-ecore-evas-directfb \
+	--enable-tests \
+	--enable-doc
+
+override_dh_auto_build-indep:
+	$(MAKE) doc
+
+override_dh_auto_test-indep:
+override_dh_auto_test-arch:
+	-$(MAKE) check
+
+override_dh_install:
+	dh_install
+ifeq ($(DEB_HOST_ARCH_OS),linux)
+	dh_install -plibecore-dev debian/tmp/usr/lib/*/libecore_fb.so
+endif
+
+override_dh_makeshlibs:
+	dh_makeshlibs -V
+
+override_dh_strip:
+	dh_strip --dbg-package=libecore-dbg
