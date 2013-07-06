@@ -1,0 +1,13 @@
+PACKAGE_TARNAME=@PACKAGE_TARNAME@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+docdir=@docdir@
+
+Name: ecore-cocoa
+Description: E core library, Cocoa module
+@pkgconfig_requires_private@: @requirements_ecore_cocoa@
+Version: @VERSION@
+Libs: -L${libdir} -lecore_cocoa
+Cflags: -I${includedir}/ecore-@VMAJ@

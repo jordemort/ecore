@@ -1,0 +1,13 @@
+PACKAGE_TARNAME=@PACKAGE_TARNAME@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+docdir=@docdir@
+
+Name: ecore-fb
+Description: E core library, FB module
+@pkgconfig_requires_private@: @requirements_ecore_fb@
+Version: @VERSION@
+Libs: -L${libdir} -lecore_fb
+Cflags: -I${includedir}/ecore-@VMAJ@

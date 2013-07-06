@@ -1,0 +1,13 @@
+PACKAGE_TARNAME=@PACKAGE_TARNAME@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+docdir=@docdir@
+
+Name: ecore-input
+Description: E core library, Input module
+@pkgconfig_requires_private@: @requirements_ecore_input@
+Version: @VERSION@
+Libs: -L${libdir} -lecore_input
+Cflags: -I${includedir}/ecore-@VMAJ@

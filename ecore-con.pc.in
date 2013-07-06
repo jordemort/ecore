@@ -1,0 +1,13 @@
+PACKAGE_TARNAME=@PACKAGE_TARNAME@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+docdir=@docdir@
+
+Name: ecore-con
+Description: E core library, Con module
+@pkgconfig_requires_private@: @requirements_ecore_con@
+Version: @VERSION@
+Libs: -L${libdir} -lecore_con
+Cflags: -I${includedir}/ecore-@VMAJ@
