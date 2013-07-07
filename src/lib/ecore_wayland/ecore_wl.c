@@ -38,6 +38,8 @@ static Eina_Bool _ecore_wl_cb_handle_data(void *data, Ecore_Fd_Handler *hdl);
 static void _ecore_wl_cb_handle_global(void *data, struct wl_registry *registry, unsigned int id, const char *interface, unsigned int version __UNUSED__);
 static Eina_Bool _ecore_wl_xkb_init(Ecore_Wl_Display *ewd);
 static Eina_Bool _ecore_wl_xkb_shutdown(Ecore_Wl_Display *ewd);
+static void _ecore_wl_sync_wait(Ecore_Wl_Display *ewd);
+static void _ecore_wl_sync_callback(void *data, struct wl_callback *callback, uint32_t serial);
 
 /* local variables */
 static int _ecore_wl_init_count = 0;
@@ -45,6 +47,11 @@ static const struct wl_registry_listener _ecore_wl_registry_listener =
 {
    _ecore_wl_cb_handle_global,
    NULL // handle_global_remove
+};
+
+static const struct wl_callback_listener _ecore_wl_sync_listener =
+{
+   _ecore_wl_sync_callback
 };
 
 /* external variables */
@@ -174,6 +181,7 @@ ecore_wl_init(const char *name)
 
    wl_list_init(&_ecore_wl_disp->inputs);
    wl_list_init(&_ecore_wl_disp->outputs);
+   wl_list_init(&_ecore_wl_disp->globals);
 
    _ecore_wl_disp->wl.registry = 
      wl_display_get_registry(_ecore_wl_disp->wl.display);
@@ -251,7 +259,9 @@ ecore_wl_sync(void)
 {
 //   LOGFN(__FILE__, __LINE__, __FUNCTION__);
 
-   wl_display_sync(_ecore_wl_disp->wl.display);
+   _ecore_wl_sync_wait(_ecore_wl_disp);
+   while (_ecore_wl_disp->sync_ref_count > 0)
+     wl_display_dispatch(_ecore_wl_disp->wl.display);
 }
 
 /**
@@ -288,6 +298,18 @@ ecore_wl_display_get(void)
    return _ecore_wl_disp->wl.display;
 }
 
+EAPI struct wl_list *
+ecore_wl_globals_get(void)
+{
+   return &(_ecore_wl_disp->globals);
+}
+
+EAPI struct wl_registry *
+ecore_wl_registry_get(void)
+{
+   return _ecore_wl_disp->wl.registry;
+}
+
 /**
  * Retrieves the size of the current screen.
  * 
@@ -305,7 +327,26 @@ ecore_wl_screen_size_get(int *w, int *h)
    if (w) *w = 0;
    if (h) *h = 0;
 
+   if (!_ecore_wl_disp->output)
+     ecore_wl_sync();
+
    if (!_ecore_wl_disp->output) return;
+
+   switch (_ecore_wl_disp->output->transform)
+     {
+      case WL_OUTPUT_TRANSFORM_90:
+      case WL_OUTPUT_TRANSFORM_270:
+      case WL_OUTPUT_TRANSFORM_FLIPPED_90:
+      case WL_OUTPUT_TRANSFORM_FLIPPED_270:
+         /* Swap width and height */
+         if (w) *w = _ecore_wl_disp->output->allocation.h;
+         if (h) *h = _ecore_wl_disp->output->allocation.w;
+         break;
+      default:
+         if (w) *w = _ecore_wl_disp->output->allocation.w;
+         if (h) *h = _ecore_wl_disp->output->allocation.h;
+     }
+
 
    if (w) *w = _ecore_wl_disp->output->allocation.w;
    if (h) *h = _ecore_wl_disp->output->allocation.h;
@@ -393,12 +434,20 @@ _ecore_wl_shutdown(Eina_Bool close)
      {
         Ecore_Wl_Output *out, *tout;
         Ecore_Wl_Input *in, *tin;
+        Ecore_Wl_Global *global, *tglobal;
 
         wl_list_for_each_safe(out, tout, &_ecore_wl_disp->outputs, link)
           _ecore_wl_output_del(out);
 
         wl_list_for_each_safe(in, tin, &_ecore_wl_disp->inputs, link)
           _ecore_wl_input_del(in);
+
+        wl_list_for_each_safe(global, tglobal, &_ecore_wl_disp->globals, link)
+          {
+             wl_list_remove(&global->link);
+             free(global->interface);
+             free(global);
+          }
 
         _ecore_wl_xkb_shutdown(_ecore_wl_disp);
 
@@ -484,10 +533,20 @@ static void
 _ecore_wl_cb_handle_global(void *data, struct wl_registry *registry, unsigned int id, const char *interface, unsigned int version __UNUSED__)
 {
    Ecore_Wl_Display *ewd;
+   Ecore_Wl_Global *global;
 
    LOGFN(__FILE__, __LINE__, __FUNCTION__);
 
    ewd = data;
+
+   global = malloc(sizeof(*global));
+
+   memset(global, 0, sizeof(Ecore_Wl_Global));
+
+   global->id = id;
+   global->interface = strdup(interface);
+   global->version = version;
+   wl_list_insert(ewd->globals.prev, &global->link);
 
    if (!strcmp(interface, "wl_compositor"))
      {
@@ -557,4 +616,23 @@ struct wl_data_source *
 _ecore_wl_create_data_source(Ecore_Wl_Display *ewd)
 {
    return wl_data_device_manager_create_data_source(ewd->wl.data_device_manager);
+}
+
+static void
+_ecore_wl_sync_callback(void *data, struct wl_callback *callback, uint32_t serial EINA_UNUSED)
+{
+   Ecore_Wl_Display *ewd = data;
+
+   ewd->sync_ref_count--;
+   wl_callback_destroy(callback);
+}
+
+static void
+_ecore_wl_sync_wait(Ecore_Wl_Display *ewd)
+{
+   struct wl_callback *callback;
+
+   ewd->sync_ref_count++;
+   callback = wl_display_sync(ewd->wl.display);
+   wl_callback_add_listener(callback, &_ecore_wl_sync_listener, ewd);
 }

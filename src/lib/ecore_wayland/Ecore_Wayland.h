@@ -26,12 +26,15 @@
 #  define EAPI
 # endif
 
-typedef enum _Ecore_Wl_Window_Type Ecore_Wl_Window_Type;
-typedef enum _Ecore_Wl_Window_Buffer_Type Ecore_Wl_Window_Buffer_Type;
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct _Ecore_Wl_Display Ecore_Wl_Display;
 typedef struct _Ecore_Wl_Output Ecore_Wl_Output;
 typedef struct _Ecore_Wl_Input Ecore_Wl_Input;
+typedef struct _Ecore_Wl_Global Ecore_Wl_Global; /** @since 1.7.6 */
+
 # ifndef _ECORE_WAYLAND_WINDOW_PREDEF
 typedef struct _Ecore_Wl_Window Ecore_Wl_Window;
 # endif
@@ -70,6 +73,18 @@ enum _Ecore_Wl_Window_Buffer_Type
    ECORE_WL_WINDOW_BUFFER_TYPE_SHM
 };
 
+typedef enum _Ecore_Wl_Window_Type Ecore_Wl_Window_Type;
+typedef enum _Ecore_Wl_Window_Buffer_Type Ecore_Wl_Window_Buffer_Type;
+
+/** @since 1.7.6 */
+struct _Ecore_Wl_Global
+{
+   unsigned int id;
+   char *interface;
+   unsigned int version;
+   struct wl_list link;
+};
+
 struct _Ecore_Wl_Display
 {
    struct 
@@ -86,11 +101,13 @@ struct _Ecore_Wl_Display
    int fd;
    unsigned int mask;
    unsigned int serial;
+   int sync_ref_count;
    Ecore_Fd_Handler *fd_hdl;
    Ecore_Idle_Enterer *idle_enterer;
 
    struct wl_list inputs;
    struct wl_list outputs;
+   struct wl_list globals; /** @since 1.7.6 */
 
    struct
      {
@@ -111,6 +128,7 @@ struct _Ecore_Wl_Output
    Ecore_Wl_Display *display;
    struct wl_output *output;
    Eina_Rectangle allocation;
+   int transform;
    int mw, mh;
    struct wl_list link;
 
@@ -199,6 +217,9 @@ struct _Ecore_Wl_Window
 
    Ecore_Wl_Input *pointer_device;
    Ecore_Wl_Input *keyboard_device;
+
+   Eina_Bool frame_pending;
+   struct wl_callback *frame_callback;
 
    /* FIXME: Ideally we should record the cursor name for this window 
     * so we can compare and avoid unnecessary cursor set calls to wayland */
@@ -356,7 +377,28 @@ EAPI void ecore_wl_input_pointer_set(Ecore_Wl_Input *input, struct wl_surface *s
 EAPI void ecore_wl_input_cursor_from_name_set(Ecore_Wl_Input *input, const char *cursor_name);
 EAPI void ecore_wl_input_cursor_default_restore(Ecore_Wl_Input *input);
 
-EAPI struct wl_list ecore_wl_outputs_get(void);
+EAPI struct wl_list *ecore_wl_outputs_get(void);
+
+/**
+ * Retrieves the Wayland Globals Interface list used for the current Wayland connection.
+ *
+ * @return The current wayland globals interface list
+ *
+ * @ingroup Ecore_Wl_Display_Group
+ * @since 1.7.6
+ */
+EAPI struct wl_list *ecore_wl_globals_get(void);
+
+/**
+ * Retrieves the Wayland Registry used for the current Wayland connection.
+ *
+ * @return The current wayland registry
+ *
+ * @ingroup Ecore_Wl_Display_Group
+ * @since 1.7.6
+ */
+EAPI struct wl_registry *ecore_wl_registry_get(void);
+
 
 EAPI Ecore_Wl_Window *ecore_wl_window_new(Ecore_Wl_Window *parent, int x, int y, int w, int h, int buffer_type);
 EAPI void ecore_wl_window_free(Ecore_Wl_Window *win);
@@ -364,6 +406,7 @@ EAPI void ecore_wl_window_move(Ecore_Wl_Window *win, int x, int y);
 EAPI void ecore_wl_window_resize(Ecore_Wl_Window *win, int w, int h, int location);
 EAPI void ecore_wl_window_damage(Ecore_Wl_Window *win, int x, int y, int w, int h);
 EAPI void ecore_wl_window_buffer_attach(Ecore_Wl_Window *win, struct wl_buffer *buffer, int x, int y);
+EAPI void ecore_wl_window_commit(Ecore_Wl_Window *win);
 EAPI void ecore_wl_window_show(Ecore_Wl_Window *win);
 EAPI void ecore_wl_window_hide(Ecore_Wl_Window *win);
 EAPI void ecore_wl_window_raise(Ecore_Wl_Window *win);
@@ -387,5 +430,9 @@ EAPI Eina_Bool ecore_wl_dnd_get_selection(Ecore_Wl_Dnd *dnd, const char *type);
 EAPI Ecore_Wl_Dnd *ecore_wl_dnd_get();
 EAPI Eina_Bool ecore_wl_dnd_start_drag();
 EAPI Eina_Bool ecore_wl_dnd_selection_has_owner(Ecore_Wl_Dnd *dnd);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

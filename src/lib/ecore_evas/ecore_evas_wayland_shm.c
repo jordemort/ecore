@@ -66,6 +66,12 @@ struct _EE_Wl_Smart_Data
    Evas_Coord x, y, w, h;
 };
 
+struct _Ecore_Evas_Engine_Wl_Data
+{
+   Ecore_Wl_Window *win;
+   Evas_Object *frame;
+};
+
 /* local function prototypes */
 static int _ecore_evas_wl_init(void);
 static int _ecore_evas_wl_shutdown(void);
@@ -103,6 +109,8 @@ static void _ecore_evas_wl_screen_dpi_get(const Ecore_Evas *ee __UNUSED__, int *
 static void _ecore_evas_wl_ensure_pool_size(Ecore_Evas *ee, int w, int h);
 static struct wl_shm_pool *_ecore_evas_wl_shm_pool_create(int size, void **data);
 
+static void _ecore_evas_wl_frame_complete(void *data, struct wl_callback *callback, uint32_t tm EINA_UNUSED);
+
 static void _ecore_evas_wl_buffer_new(Ecore_Evas *ee, struct wl_shm_pool *pool);
 
 static Eina_Bool _ecore_evas_wl_cb_mouse_in(void *data __UNUSED__, int type __UNUSED__, void *event);
@@ -126,6 +134,11 @@ static Evas_Object *_ecore_evas_wl_frame_add(Evas *evas);
 /* local variables */
 static int _ecore_evas_wl_init_count = 0;
 static Ecore_Event_Handler *_ecore_evas_wl_event_hdls[5];
+
+static const struct wl_callback_listener frame_listener =
+{
+   _ecore_evas_wl_frame_complete,
+};
 
 static Ecore_Evas_Engine_Func _ecore_wl_engine_func = 
 {
@@ -534,8 +547,18 @@ _ecore_evas_wl_resize(Ecore_Evas *ee, int w, int h)
         if (ee->engine.wl.frame)
           evas_object_resize(ee->engine.wl.frame, w, h);
 
-        if (ee->engine.wl.buffer) wl_buffer_destroy(ee->engine.wl.buffer);
-        ee->engine.wl.buffer = NULL;
+        if (ee->engine.wl.buffer)
+          {
+             if(!ee->engine.wl.buffer_valid)
+               {
+                  wl_buffer_destroy(ee->engine.wl.buffer);
+               }
+             else
+               {
+                  ee->engine.wl.buffer_valid = EINA_FALSE;
+               }
+             ee->engine.wl.buffer = NULL;
+          }
 
         _ecore_evas_wl_ensure_pool_size(ee, w, h);
 
@@ -556,8 +579,6 @@ _ecore_evas_wl_resize(Ecore_Evas *ee, int w, int h)
           {
 //             if (!ee->prop.fullscreen)
                ecore_wl_window_update_size(ee->engine.wl.win, w, h);
-             ecore_wl_window_buffer_attach(ee->engine.wl.win, 
-                                           ee->engine.wl.buffer, 0, 0);
           }
 
         if (ee->func.fn_resize) ee->func.fn_resize(ee);
@@ -639,6 +660,7 @@ _ecore_evas_wl_show(Ecore_Evas *ee)
      {
         ecore_wl_window_show(ee->engine.wl.win);
         ecore_wl_window_update_size(ee->engine.wl.win, ee->w, ee->h);
+        ee->engine.wl.buffer_valid = EINA_TRUE;
         ecore_wl_window_buffer_attach(ee->engine.wl.win, 
                                       ee->engine.wl.buffer, 0, 0);
 
@@ -822,6 +844,8 @@ _ecore_evas_wl_maximized_set(Ecore_Evas *ee, int max)
    if (ee->prop.maximized == max) return;
    ee->prop.maximized = max;
    ecore_wl_window_maximized_set(ee->engine.wl.win, max);
+   if (ee->func.fn_state_change)
+     ee->func.fn_state_change(ee);
 }
 
 static void 
@@ -833,6 +857,8 @@ _ecore_evas_wl_fullscreen_set(Ecore_Evas *ee, int full)
    if (ee->prop.fullscreen == full) return;
    ee->prop.fullscreen = full;
    ecore_wl_window_fullscreen_set(ee->engine.wl.win, full);
+   if (ee->func.fn_state_change)
+     ee->func.fn_state_change(ee);
 }
 
 static void 
@@ -886,6 +912,7 @@ _ecore_evas_wl_alpha_set(Ecore_Evas *ee, int alpha)
    if (ee->engine.wl.win)
      {
         ecore_wl_window_update_size(ee->engine.wl.win, ee->w, ee->h);
+        ee->engine.wl.buffer_valid = EINA_TRUE;
         ecore_wl_window_buffer_attach(ee->engine.wl.win, 
                                       ee->engine.wl.buffer, 0, 0);
      }
@@ -925,8 +952,29 @@ _ecore_evas_wl_transparent_set(Ecore_Evas *ee, int transparent)
    if (ee->engine.wl.win)
      {
         ecore_wl_window_update_size(ee->engine.wl.win, ee->w, ee->h);
+        ee->engine.wl.buffer_valid = EINA_TRUE;
         ecore_wl_window_buffer_attach(ee->engine.wl.win, 
                                       ee->engine.wl.buffer, 0, 0);
+     }
+}
+
+static void
+_ecore_evas_wl_frame_complete(void *data, struct wl_callback *callback, uint32_t tm EINA_UNUSED)
+{
+   Ecore_Evas *ee = data;
+   Ecore_Wl_Window *win = NULL;
+
+   if (!ee) return;
+   if (!(win = ee->engine.wl.win)) return;
+
+   win->frame_callback = NULL;
+   win->frame_pending = EINA_FALSE;
+   wl_callback_destroy(callback);
+
+   if (win->surface)
+     {
+        win->frame_callback = wl_surface_frame(win->surface);
+        wl_callback_add_listener(win->frame_callback, &frame_listener, ee);
      }
 }
 
@@ -934,18 +982,21 @@ static int
 _ecore_evas_wl_render(Ecore_Evas *ee)
 {
    int rend = 0;
+   Ecore_Wl_Window *win = NULL;
+
+   if (!(win = ee->engine.wl.win)) return 0;
 
    if (!ee) return 0;
    if (!ee->visible)
      evas_norender(ee->evas);
    else
      {
-        Eina_List *ll = NULL, *updates = NULL;
+        Eina_List *ll = NULL;
         Ecore_Evas *ee2 = NULL;
 
         if (ee->func.fn_pre_render) ee->func.fn_pre_render(ee);
 
-        EINA_LIST_FOREACH(ee->sub_ecore_evas, ll, ee2) 
+        EINA_LIST_FOREACH(ee->sub_ecore_evas, ll, ee2)
           {
              if (ee2->func.fn_pre_render) ee2->func.fn_pre_render(ee2);
              if (ee2->engine.func->fn_render)
@@ -953,25 +1004,43 @@ _ecore_evas_wl_render(Ecore_Evas *ee)
              if (ee2->func.fn_post_render) ee2->func.fn_post_render(ee2);
           }
 
-        if ((updates = evas_render_updates(ee->evas))) 
+        if (!win->frame_pending)
           {
-             Eina_List *l = NULL;
-             Eina_Rectangle *r;
+             Eina_List *updates;
 
-             LOGFN(__FILE__, __LINE__, __FUNCTION__);
+             if (!win->frame_callback)
+               {
+                  win->frame_callback = wl_surface_frame(win->surface);
+                  wl_callback_add_listener(win->frame_callback,
+                                           &frame_listener, ee);
+               }
 
-             EINA_LIST_FOREACH(updates, l, r) 
-               ecore_wl_window_damage(ee->engine.wl.win, 
-                                      r->x, r->y, r->w, r->h);
+             if ((updates = evas_render_updates(ee->evas)))
+               {
+                  Eina_List *l = NULL;
+                  Eina_Rectangle *r;
 
-             ecore_wl_flush();
+                  LOGFN(__FILE__, __LINE__, __FUNCTION__);
 
-             evas_render_updates_free(updates);
-             _ecore_evas_idle_timeout_update(ee);
-             rend = 1;
+                  ee->engine.wl.buffer_valid = EINA_TRUE;
+                  ecore_wl_window_buffer_attach(ee->engine.wl.win,
+                                                ee->engine.wl.buffer, 0, 0);
+                  EINA_LIST_FOREACH(updates, l, r)
+                     ecore_wl_window_damage(ee->engine.wl.win,
+                                            r->x, r->y, r->w, r->h);
+                  ecore_wl_window_commit(ee->engine.wl.win);
+                  ecore_wl_flush();
+
+                  evas_render_updates_free(updates);
+                  _ecore_evas_idle_timeout_update(ee);
+                  rend = 1;
+
+                  if (ee->func.fn_post_render) ee->func.fn_post_render(ee);
+
+                  win->frame_pending = EINA_TRUE;
+
+               }
           }
-
-        if (ee->func.fn_post_render) ee->func.fn_post_render(ee);
      }
    return rend;
 }
@@ -1044,6 +1113,22 @@ _ecore_evas_wl_shm_pool_create(int size, void **data)
    return pool;
 }
 
+static void
+_ecore_evas_wl_buffer_release(void *data, struct wl_buffer *buffer)
+{
+   Ecore_Evas *ee = data;
+
+   if (ee->engine.wl.buffer == buffer)
+     ee->engine.wl.buffer_valid = EINA_FALSE;
+   else
+     wl_buffer_destroy(buffer);
+}
+
+static const struct wl_buffer_listener _buffer_listener_release =
+{
+   _ecore_evas_wl_buffer_release
+};
+
 static void 
 _ecore_evas_wl_buffer_new(Ecore_Evas *ee, struct wl_shm_pool *pool)
 {
@@ -1057,8 +1142,11 @@ _ecore_evas_wl_buffer_new(Ecore_Evas *ee, struct wl_shm_pool *pool)
 
    stride = (ee->w * sizeof(int));
 
-   ee->engine.wl.buffer = 
+   ee->engine.wl.buffer =
      wl_shm_pool_create_buffer(pool, 0, ee->w, ee->h, stride, format);
+
+   wl_buffer_add_listener(ee->engine.wl.buffer,
+                          &_buffer_listener_release, ee);
 }
 
 void 

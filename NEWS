@@ -1,3 +1,54 @@
+Ecore 1.7.7
+
+Changes since Ecore 1.7.6:
+--------------------------
+Additions:
+    * ecore_evas/wayland_shm: Backport frame_callback implementation.
+
+Fixes:
+    * ecore_evas/wayland_shm: Attach the buffer before adding damage.
+    * ecore_evas/wayland_shm: Don't destroy a non-released buffer.
+    * ecore_evas/x: Backport fixes on window properties handling.
+
+Ecore 1.7.6
+
+Changes since Ecore 1.7.5:
+--------------------------
+
+Additions:
+    * Add infrastructure to handle buggy touchscreen in Ecore_Input_Evas.
+    * Thread safety for ecore_pipe
+    * ecore_wayland:
+     - Add ecore_wl_registry_get;
+     - Add ecore_wl_globals_get.
+
+Fixes:
+    * Fixed x11 error sync issue with ecore_x_image_get().
+    * Fixed Ecore_Wayland to build with C++ compiler.
+    * Fixed return type of function ecore_wl_outputs_get().
+    * Fix ecore_x_screen_is_composited/set() to work on multihead.
+    * Fixed a memory leak in ecore_con_dns.
+    * Fixed memory usage of the internal buffer of Ecore_Con_Server.
+    * Fix handling of mouse and touch screen in Ecore_Evas_Fb.
+    * Fix ecore-x edid fetch to ftech 128, not 100 bytes.
+    * cleaned up gnutls session init
+    * fix hosts file use with ecore-con and dns.c
+    * fix use of ecore_con_*_flush functions with unconnected objects
+    * fix setting of write flags on ecore-con servers during connect
+    * fix ecore_con_url download speed bug
+    * fix wayland window resize using meta + middle click.
+
+Ecore 1.7.5
+
+Changes since Ecore 1.7.4:
+--------------------------
+
+Fixes:
+    * Fix ecore_con case where freeing server double-frees clients
+
+Improvements:
+    * New simplified chinese translation.
+
 Ecore 1.7.4
 
 Changes since Ecore 1.7.3:
