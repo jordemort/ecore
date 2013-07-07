@@ -1,3 +1,9 @@
+ecore (1.7.7-1) unstable; urgency=low
+
+  * Imported Upstream version 1.7.7
+
+ -- Jordan Webb <jordan.webb@gmail.com>  Sun, 07 Jul 2013 03:10:33 +0000
+
 ecore (1.7.4-2) unstable; urgency=low
 
   * Upload to unstable
