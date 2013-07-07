@@ -39,7 +39,7 @@
 
 Summary: Enlightened Core X interface library
 Name: ecore
-Version: 1.7.4
+Version: 1.7.7
 Release: %{_rel}
 License: BSD
 Group: User Interface/X

@@ -42,10 +42,10 @@ static const struct wl_output_listener _ecore_wl_output_listener =
 };
 
 /* @since 1.2 */
-EAPI struct wl_list 
+EAPI struct wl_list *
 ecore_wl_outputs_get(void)
 {
-   return _ecore_wl_disp->outputs;
+   return &(_ecore_wl_disp->outputs);
 }
 
 void 
@@ -80,7 +80,7 @@ _ecore_wl_output_del(Ecore_Wl_Output *output)
 
 /* local functions */
 static void 
-_ecore_wl_output_cb_geometry(void *data, struct wl_output *wl_output __UNUSED__, int x, int y, int w, int h, int subpixel __UNUSED__, const char *make __UNUSED__, const char *model __UNUSED__, int transform __UNUSED__)
+_ecore_wl_output_cb_geometry(void *data, struct wl_output *wl_output __UNUSED__, int x, int y, int w, int h, int subpixel __UNUSED__, const char *make __UNUSED__, const char *model __UNUSED__, int transform)
 {
    Ecore_Wl_Output *output;
 
@@ -91,6 +91,7 @@ _ecore_wl_output_cb_geometry(void *data, struct wl_output *wl_output __UNUSED__,
    output->allocation.y = y;
    output->mw = w;
    output->mh = h;
+   output->transform = transform;
 }
 
 static void 

@@ -1,4 +1,4 @@
-# $Id: ecore.supp 11909 2004-10-19 16:40:25Z tsauerbeck $
+# $Id$
 # valgrind suppression file for Ecore
 #
 {

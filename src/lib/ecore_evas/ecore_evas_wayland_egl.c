@@ -533,6 +533,15 @@ _ecore_evas_wl_resize(Ecore_Evas *ee, int w, int h)
 
         if (ee->engine.wl.win)
           {
+             Evas_Engine_Info_Wayland_Egl *einfo;
+
+             if ((einfo = (Evas_Engine_Info_Wayland_Egl *)evas_engine_info_get(ee->evas)))
+               {
+                  einfo->info.edges = ee->engine.wl.win->edges;
+                  if (!evas_engine_info_set(ee->evas, (Evas_Engine_Info *)einfo))
+                    ERR("evas_engine_info_set() for engine '%s' failed.", ee->driver);
+               }
+
              ecore_wl_window_update_size(ee->engine.wl.win, w, h);
              ecore_wl_window_buffer_attach(ee->engine.wl.win, NULL, 0, 0);
           }
@@ -749,6 +758,8 @@ _ecore_evas_wl_maximized_set(Ecore_Evas *ee, int max)
    if (ee->prop.maximized == max) return;
    ee->prop.maximized = max;
    ecore_wl_window_maximized_set(ee->engine.wl.win, max);
+   if (ee->func.fn_state_change)
+     ee->func.fn_state_change(ee);
 }
 
 static void 
@@ -760,6 +771,8 @@ _ecore_evas_wl_fullscreen_set(Ecore_Evas *ee, int full)
    if (ee->prop.fullscreen == full) return;
    ee->prop.fullscreen = full;
    ecore_wl_window_fullscreen_set(ee->engine.wl.win, full);
+   if (ee->func.fn_state_change)
+     ee->func.fn_state_change(ee);
 }
 
 static void 

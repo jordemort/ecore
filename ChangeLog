@@ -965,6 +965,10 @@
 
 	* Properly reschedule call to curl.
 
+2012-11-06  Mike McCormack
+
+        * Add thread safety to ecore_pipe
+
 2012-10-10 Michal Pakula vel Rutka
 
        * Fix: Send ECORE_X_EVENT_SELECTION_NOTIFY even if there is no data.
@@ -1036,9 +1040,118 @@
 
         * Fixed 24bpp ximage convert back from 24bpp to 32bpp in
         ecore-x. Only shows itself in qemu/kvm.
-                
 
 2012-12-21  Luis Felipe Strano Moraes
 
 	* 1.7.4 release
 
+2013-01-03  Carsten Haitzler (The Rasterman)
+
+        * Fixed ecore_con case where freeing server double-frees clients
+
+2013-01-04  Luis Felipe Strano Moraes
+
+	* 1.7.5 release
+
+2013-01-13  Boris Faure (billiob)
+
+	* Fixed condition based on uninitialized value in ecore_x_selection
+	(both xlib and xcb).
+	* Fixed a leaked when no selection converter matches.
+
+2013-01-18  Cedric Bail
+
+        * Ecore_Input_Evas: add infrastructure to handle buggy touchscreen by using
+        environment variable ECORE_INPUT_FIX and ECORE_INPUT_TIMEOUT_FIX.
+
+2013-01-21  Carsten Haitzler (The Rasterman)
+
+        * Fix xsync problem in ecore_x_image_get() where prior errors
+        can get caught.
+
+2013-01-31  Guillaume Friloux
+
+        * Fix a memory leak in ecore_con_dns
+
+2013-02-04  Eduardo Lima (Etrunko) <eduardo.lima@intel.com>
+
+        * ecore_wayland: Fix compilation with C++ compiler
+
+2013-02-04  Rafael Antognolli
+
+        * ecore_evas/wayland_egl: Fix window resize when using meta+middle
+        click.
+
+2013-02-05  Eduardo Lima (Etrunko) <eduardo.lima@intel.com>
+
+        * ecore_wayland: Fix return type of function ecore_wl_outputs_get()
+
+2013-02-06  Rafael Antognolli
+
+        * ecore/wayland: Always send the mouse button event.
+
+2013-02-08  Carsten Haitzler (The Rasterman)
+
+        * Fix ecore_x ecore_x_screen_is_composited/set() to work
+        properly on multihead.
+
+2013-02-08  Guillaume Friloux <guillaume.friloux@asp64.com>
+
+        * ecore_con : Fix memory usage of the internal buffer
+
+2013-02-08  Rafael Antognolli
+
+        * ecore/wayland: Don't use edge info for resizing in some cases.
+
+2013-02-14  Raoul Hecky <raoul.hecky@gmail.com>
+
+	* ecore_evas: handle mouse and touch screen properly with FB backend.
+
+2013-02-20  Carsten Haitzler (The Rasterman)
+
+        * Fix ecore-x edid fetch to ftech 128, not 100 bytes.
+
+2013-02-28  U. Artie Eoff (uartie)
+
+        * ecore_wayland: Add ecore_wl_registry_get
+        * ecore_wayland: Add ecore_wl_globals_get
+
+2013-03-11  Mike Blumenkrantz
+
+        * cleaned up gnutls session init
+
+2013-03-12  Mike Blumenkrantz
+
+        * fix hosts file use with ecore-con and dns.c
+
+2013-03-14  Mike Blumenkrantz
+
+        * fix use of ecore_con_*_flush functions with unconnected objects
+        * fix setting of write flags on ecore-con servers during connect
+
+2013-03-27  Cedric Bail
+
+	* fix ecore_con_url download speed
+
+2013-04-02  Rafael Antognolli
+
+        * ecore/wayland: Fix screen geometry when it is rotated.
+
+2013-04-04  Rafael Antognolli
+
+        * 1.7.6 release
+
+2013-04-08  Rafael Antognolli
+
+        * ecore/wayland: Actually wait for the sync callback on
+        ecore_wl_sync().
+        * ecore/wayland: Sync before assuming that there's no output on
+        ecore_evas_screen_geometry_get().
+
+2013-04-15  Rafael Antognolli
+
+        * ecore_evas/wayland_shm: Attach the buffer before adding damage.
+        * ecore_evas/wayland_shm: Backport frame_callback implementation.
+
+2013-04-30  Rafael Antognolli
+        * ecore_evas/wayland_shm: Don't destroy a non-released buffer.
